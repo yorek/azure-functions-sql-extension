@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
+using System.IO;
+using Newtonsoft.Json;
 using static SqlExtensionSamples.ProductUtilities;
 
 namespace SqlExtensionSamples
@@ -14,17 +16,25 @@ namespace SqlExtensionSamples
     {
         [FunctionName("AddProduct")]
         public static IActionResult Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "addproduct")]
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "product")]
             HttpRequest req,
-            [Sql("Products", ConnectionStringSetting = "SqlConnectionString")] out Product product)
+            [Sql("dbo.Products", ConnectionStringSetting = "SqlConnectionString")] out Product product)
         {
-            product = new Product
-            {
-                Name = req.Query["name"],
-                ProductID = int.Parse(req.Query["id"]),
-                Cost = int.Parse(req.Query["cost"])
-            };
-            return new CreatedResult($"/api/addproduct", product);
+
+            /*
+             * Expected JSON
+             * 
+             
+                {
+                    "ProductID": 2000001,
+                    "Name": "Another Pizza",
+                    "Cost": 10
+                }
+            */
+            string requestBody = new StreamReader(req.Body).ReadToEnd();
+            product = JsonConvert.DeserializeObject<Product>(requestBody);
+
+            return new CreatedResult($"/api/product", product);
         }
     }
 }
